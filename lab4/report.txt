@@ -1,0 +1,33 @@
+# Description
+
+The application works the same as in lab3, with a few key differences. The largest one is that the server keeps track of the previous packet in order to check for duplicates. Additionally, 
+
+# Sources
+
+StackExchange
+Lecture notes
+man page for setsockopt
+
+# Questions
+
+1. How much more likely are you to drop a packet in Lab4 (with 3 methods of randomly dropping a packet) vs Lab3 (with 1 method of randomly dropping a packet)? 
+At a 20% chance to drop a packet, one method gives a 20% chance to drop (duh) and 3 methods gives 1-(.8)^3 = 48.8% chance to drop a packet - a roughly 2.5x increase.
+
+2. Why did we have to have to emulate the packet drops? Why do you think the DC machines would not normally drop packets when communicating with each other (or themselves?)
+They're on the same network, so unless someone's randomly unplugging network cables mid-transfer, disruption's not going to happen.
+
+3. Describe a situation in which you could get this much packet loss.
+In an extreme situation, you could have a wireless signal that isn't strong enough to transmit data reliably, but generally packet loss is going to happen when the network is flooded - say everyone on the SCU campus decided to stream the World Series at the same time, for example.
+
+4. Why can we wait before reading from the socket? Describe a queueing mechanism that occurs at the network layer for your packets. (Week 6 lectures)
+Routers have Head of the Line (HOL) blocking, which prevents packets from cutting in line.
+
+5. Here, have 5 free points.
+Cool.
+
+# Questions For TA
+n/a
+
+# Comments and Feedback
+n/a
+

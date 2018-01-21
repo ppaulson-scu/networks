@@ -1,0 +1,247 @@
+ /**************************
+ *     Based on:
+ *     socket example, server
+ *     fall 2017
+ ***************************/
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <math.h>
+#include "header.h"
+
+#define BUFF_LEN 100;
+
+int main (int, char *[]); 
+
+
+/*********************
+ * main
+ *********************/
+int main (int argc, char *argv[])
+{
+	int rcvd_bytes; 
+	char buff[BUFF_LEN];
+	struct addrinfo hints, *res;
+	UDPSocket socket;
+	int seq = 0;
+	char filename[20] = "";
+
+	// set up
+	memset (buff, '0', sizeof (buff)); 
+	memset (&hints, 0, sizeof (hints));
+
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	getaddrinfo(NULL, argv[1], &hints, &res);
+	
+	// create socket, bind, and listen
+	socket.sockfd = socket (res->ai_family, res->ai_socktype, 0);
+	bind (socket.sockfd, res->ai_addr, res->ai_addrlen);
+
+	socket.socklen = sizeof socket.remoteInfo;
+	while(1){
+		memset(buff, '0', sizeof(buff);
+		rcvd_bytes = recvfrom(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, &socket.socklen);
+		
+		//reassemble packet
+		packet message;
+		memcpy(&message, buff, sizeof(pck));
+
+		if(message.type == HANDSHAKE){
+
+			//send handshake ACK
+			seq = (seq == 0) ? 1 : 0;
+			sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, socket.socklen);
+			continue;
+		}
+
+		if(validate_msg(message, seq) == 0) continue;
+
+		if(message.type == FILENAME){
+			strcat(file_name, message.data);
+
+			seq = (seq == 0) ? 1 : 0;
+			sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, socket.socklen);
+		}
+
+		if(message.type == DATA){
+			FILE *dest = fopen(filename, "w");
+			fwrite(message.data, 1, message.numbytes, dest);
+			fclose(dest);
+
+			seq = (seq == 0) ? 1 : 0;
+			sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, socket.socklen);
+		}
+		
+		if(message.type == FILEEND){
+			seq = (seq == 0) ? 1 : 0;
+			sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, socket.socklen);
+			break;
+		}
+	}
+	
+	close(socket.sockfd);
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***************************
+ *	Based on
+ *	socket example, client
+ *	fall 2017
+ **************************/
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include "header.h"
+
+int main (int, char *[]);
+
+#define BUFF_LEN 100
+
+/********************
+ * main
+ ********************/
+int main (int argc, char *argv[])
+{
+	UDPSocket socket;
+	char buff[BUFF_LEN];
+	struct addrinfo hints, *res;
+	int seq = 0; 
+
+	if (argc != 5)
+	{
+		printf ("Usage: %s <ip of server> <port> <srcfile> <destfile> \n",argv[0]);
+		return 1;
+	} 
+
+	// set up
+	memset (buff, '0', sizeof (buff));
+	memset (&hints, 0, sizeof (hints));
+
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE;
+	
+	//File setup
+	FILE *src = fopen(argv[1], "r");
+
+	getaddrinfo(argv[3], argv[4], &hints, &res);
+	
+
+	// open socket
+	if ((socket.sockfd = socket (res->ai_family, res->ai_socktype, res->ai_protocol)) < 0)
+	{
+		printf ("Error : Could not create socket \n");
+		return 1;
+	}
+	
+	socket.socklen = sizeof(socket.remoteInfo);
+	
+	//send handshake
+	packet message;
+	message.type = HANDSHAKE;
+	message.seq_num = seq;
+	memcpy(buff, &message, sizeof(message));
+	while(1){
+		sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, res->ai_addr, res->ai_addrlen);
+		recvfrom(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, &socket.socklen);
+
+		packet response;
+		memcpy(&response, buff, sizeof(response));
+		if(response.seq_num == seq && response.type == HANDSHAKE){
+			seq = (seq == 0) ? 1 : 0;
+			break;
+		}
+	}
+
+	//send filename
+
+	packet message = { seq, calc_checksum(argv[2], sizeof(argv[2]), argv[2], sizeof[argv[2]), FILENAME }
+	memcpy( buff, &message, sizeof(message));
+	while(1){
+		sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, res->ai_addr, res->ai_addrlen);
+
+		recvfrom(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, &socket.socklen);
+		packet response;
+		memcpy(&response, buff, sizeof(response));
+		if(validate_msg(response, seq) == 1 && response.type == FILENAME){
+			seq = (seq == 0) ? 1 : 0;
+			break;
+		}
+	}
+		
+	//send data
+	FILE *src = fopen(argv[1], "r");
+	while(!(feof() == 0)){				//Send the entire message
+		packet message;
+		message.seq_num = seq;
+		message.type = DATA;
+		message.numbytes = fread(message.data, sizeof(message.data), 10, src);
+		message.checksum = calc_checksum(message.data, message.numbytes);
+		
+		memcpy(buff, &message, sizeof(message));
+		while(1){						//Send this specific chunk
+			sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, res->ai_addr, res->ai_addrlen);
+
+			recvfrom(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, &socket.socklen);
+			packet response;
+			memcpy(&response, buff, sizeof(response));
+			if(validate_msg(response, seq) == 1 && response.type == DATA){
+				seq = (seq == 0) ? 1 : 0;
+				break;
+			}
+		}
+	}
+
+	fclose(src);
+	//send last packet
+	packet message;
+	message.type = FILEEND;
+	message.seq_num = seq;
+	memcpy(buff, &message, sizeof(message));
+	while(1){
+		sendto(socket.sockfd, buff, BUFF_LEN - 1, 0, res->ai_addr, res->ai_addrlen);
+		recvfrom(socket.sockfd, buff, BUFF_LEN - 1, 0, &socket.remoteInfo, &socket.socklen);
+
+		packet response;
+		memcpy(&response, buff, sizeof(response));
+		if(response.seq_num == seq && response.type == FILEEND){
+			seq = (seq == 0) ? 1 : 0;
+			break;
+		}
+	}
+
+	close(socket.sockfd);
+	return 0;	
+	
+}

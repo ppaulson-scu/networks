@@ -1,0 +1,50 @@
+# Description
+
+I didn't have too much of a problem with this lab. I actually wrote the entire transmission logic before I did any testing, and while I got away with it, it's probably a much better idea to go step-by-step in FTP applications. The largest challenge that I faced were figuring out how to do a few little things in 
+# Sources
+
+www.cplusplus.com (documentation)
+Beej's guide, specifically the sendto() and recvfrom() pages
+StackExchange (because I'm an idiot and forgot how copying arrays works)
+The structures that you have in the lab description were copied almost exactly into my header, and were extremely useful - way easier that repeatedly parsing an array.
+
+# Questions
+
+1. What extra processing did you have to do on the server side now that we switched from TCP to UDP?
+	1. I had to check if the message was corrupt or not.
+	2. I had to actually send data back to the client
+	3. I had to check what kind of data was being sent.
+
+2. How did your application work? What was the protocol that you used? Generally, give me the pseudocode of your algorithm.
+
+	Transmission order - handshake, filename, data, fileend
+	Packet - uint8_t seq_num, checksum, and numbytes; 10-byte char array of data; enum messagetype.
+	Clientside
+		send a handshake message. When you get a response, if it's valid, continue; else resend.
+		send a filename message. When you get a response, if it's valid, continue; else resend.
+		send a data message. When you get a response, if it's valid, continue; else resend.
+		continue sending data messages until we run out.
+		send a fileend message. When you get a response, if it's valid, we're done.
+
+	Serverside:
+		For each message, check the type. If it's the initial handshake, send an ACK, then wait for the next packet.
+		Check to see if it's valid - we don't care about the handshake validity, but we do from now on.
+		Check to see if it's a filename. If it is, create a file pointer and open that filename for writing. Send an ACK, then wait for the next packet.
+		Check to see if it's a piece of data. If it is, write $numbytes of $data to the currently open file. Send an ACK, then wait for the next packet.
+		Check to see if it's the fileend type. If it is, close the open file, then send an ACK and break the loop, closing the socket.
+		
+
+3. For your implementation, how many bytes of metadata did you send?
+	4? I sent 3 uint8_t and an emum.
+
+4. The extra processing of UDP seems like a lot of work, in what sort of application could you see UDP being a better candidate than TCP? Why?
+	Not having to maintain a constant connection seems like it would actually make the connection reliably fast, especially if you only need most of the packets to get there. Also, it's easier in the clientside, since you just kind of jam an IP and a port onto the message and throw it out the window. In programs where you care about speed over everything else, I could see using UDP.
+
+5. Do you feel comfortable with the material covered in lab so far? Do you need any help?
+	Pretty comfortable, although I feel like I should start writing more utility methods - I had a few here, but they were mostly for processing rather than for building packets. 
+# Questions For TA
+	n/a
+
+# Comments and Feedback
+	n/a
+
